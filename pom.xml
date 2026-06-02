@@ -1,19 +1,40 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.guicedee</groupId>
         <artifactId>parent</artifactId>
-        <version>2.1.0-SNAPSHOT</version>
+        <version>2.1.1-SNAPSHOT</version>
     </parent>
     <groupId>com.guicedee</groupId>
     <artifactId>service-registry</artifactId>
     <packaging>jar</packaging>
-    <version>2.1.0-SNAPSHOT</version>
+    <version>2.1.1-SNAPSHOT</version>
     <name>GuicedEE Service Registry</name>
-    <description>Named service registry with health-aware resolution — register, discover, and resolve services by
+    <description>Named service registry with health-aware resolution â€” register, discover, and resolve services by
         simple name
     </description>
+    <url>https://guicedee.com</url>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <url>https://github.com/GuicedEE/ServiceRegistry</url>
+        <connection>scm:git:https://github.com/GuicedEE/ServiceRegistry.git</connection>
+        <developerConnection>scm:git:https://github.com/GuicedEE/ServiceRegistry.git</developerConnection>
+    </scm>
+    <developers>
+        <developer>
+            <id>GedMarc</id>
+            <name>Marc Magon</name>
+            <email>marc.magon@gmail.com</email>
+            <url>https://github.com/GedMarc</url>
+        </developer>
+    </developers>
     <properties>
         <project.scm.nameUrl>/GuicedEE/ServiceRegistry</project.scm.nameUrl>
         <ignore.moditect>true</ignore.moditect>
@@ -72,6 +93,14 @@
             <plugin>
                 <groupId>com.coderplus.maven.plugins</groupId>
                 <artifactId>copy-rename-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -140,4 +169,3 @@
         </dependencies>
     </dependencyManagement>
 </project>
-
