@@ -224,7 +224,7 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         }
         catch (ClassNotFoundException e)
         {
-            log.debug("runtime-autoconfigure not on classpath, skipping self-registration");
+            log.debug("⏭️ runtime-autoconfigure not on classpath, skipping self-registration");
         }
         catch (Exception e)
         {
