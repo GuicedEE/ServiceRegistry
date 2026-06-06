@@ -282,7 +282,6 @@ public class ServiceRegistryPostStartup implements IGuicePostStartup<ServiceRegi
      * @param body the JSON response body, may be null
      * @return list of parsed health details, or empty list if unparseable
      */
-    @SuppressWarnings("unchecked")
     private List<ServiceHealthDetail> parseHealthDetails(String body)
     {
         if (body == null || body.isBlank())
