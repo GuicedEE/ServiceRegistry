@@ -601,22 +601,24 @@ public class ServiceRegistry
     }
 
     /**
-     * Resolves ${ENV_VAR} placeholders in a string.
+     * Resolves placeholders in a string using the shared {@link Environment} resolver.
+     * <p>
+     * Delegates to {@link Environment#resolvePlaceholders(String)} so the registry honours
+     * the full placeholder grammar supported across GuicedEE:
+     * <ul>
+     *     <li>{@code ${VAR}} — system property, env var, or {@code .env}/{@code .env.local} lookup</li>
+     *     <li>{@code ${VAR:default}} and {@code ${VAR:-default}} — fallback when unset/empty</li>
+     *     <li>{@code ${env.VAR}} — explicit environment prefix</li>
+     *     <li>Nested placeholders (resolved recursively)</li>
+     * </ul>
+     * This fixes the previous naive parser which treated everything between {@code ${} and
+     * {@code }} as a single variable name — e.g. {@code ${NE1_CORE_URL:http://localhost:8080}}
+     * was looked up as a variable literally named {@code NE1_CORE_URL:http://localhost:8080},
+     * resolved to an empty string, and produced a scheme-less URI.
      */
     public static String resolveEnvPlaceholders(String input)
     {
-        if (input == null || !input.contains("${")) return input;
-        String result = input;
-        int start;
-        while ((start = result.indexOf("${")) >= 0)
-        {
-            int end = result.indexOf("}", start);
-            if (end < 0) break;
-            String varName = result.substring(start + 2, end);
-            String value = Environment.getSystemPropertyOrEnvironment(varName, "");
-            result = result.substring(0, start) + value + result.substring(end + 1);
-        }
-        return result;
+        return Environment.resolvePlaceholders(input);
     }
 
     /** Clears all registered services, aliases, instances, and listeners. Used for testing. */
