@@ -25,7 +25,7 @@ Built on [Vert.x 5](https://vertx.io/) · [Google Guice](https://github.com/goog
 <summary>Gradle (Kotlin DSL)</summary>
 
 ```kotlin
-implementation("com.guicedee:service-registry:2.1.0-SNAPSHOT")
+implementation("com.guicedee:service-registry:2.2.0")
 ```
 </details>
 
