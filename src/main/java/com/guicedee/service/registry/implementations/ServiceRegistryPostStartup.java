@@ -1,7 +1,6 @@
 package com.guicedee.service.registry.implementations;
 
 import com.guicedee.client.services.lifecycle.IGuicePostStartup;
-import com.guicedee.client.services.lifecycle.IGuicePostStartup;
 import com.guicedee.service.registry.ServiceEntry;
 import com.guicedee.service.registry.ServiceHealthDetail;
 import com.guicedee.service.registry.ServiceRegistry;
@@ -72,8 +71,9 @@ public class ServiceRegistryPostStartup implements IGuicePostStartup<ServiceRegi
 
         webClient = WebClient.create(vertx, new WebClientOptions()
                 .setConnectTimeout(timeout)
-                .setTrustAll(true)
-                .setFollowRedirects(true));
+                .setTrustAll(false)
+                .setVerifyHost(true)
+                .setFollowRedirects(false));
 
         // Initial health check
         checkAllServices();
@@ -160,11 +160,20 @@ public class ServiceRegistryPostStartup implements IGuicePostStartup<ServiceRegi
             final int expectedStatusCode = expectedStatus;
             final boolean expectsJson = "application/json".equals(expectedContentType);
 
-            webClient.get(port, uri.getHost(), uri.getPath())
+            webClient.get(port, uri.getHost(), uri.getRawPath().isEmpty() ? "/" : uri.getRawPath())
                     .ssl(ssl)
                     .send()
                     .onSuccess(response -> {
                         int statusCode = response.statusCode();
+
+                        // A redirect must not escape the configured operational endpoint,
+                        // including when a caller declares a 3xx expected status.
+                        if (statusCode >= 300 && statusCode < 400)
+                        {
+                            updateServiceStatus(service.name(), hasRevision, revision, ServiceStatus.DOWN, List.of());
+                            FAILURE_COUNTS.merge(key, 1, Integer::sum);
+                            return;
+                        }
 
                         if (expectsJson)
                         {

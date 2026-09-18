@@ -59,15 +59,33 @@ public record ServiceEntry(
         this.healthPath = healthPath;
         this.status = status;
         this.lastChecked = lastChecked;
-        this.metadata = metadata;
+        this.metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
+        if (this.metadata.containsKey("healthUrl"))
+            validateHealthUrl(this.metadata.get("healthUrl"));
         this.healthDetails = healthDetails != null ? List.copyOf(healthDetails) : List.of();
     }
 
     public String healthUrl()
     {
+        if (metadata.containsKey("healthUrl")) return metadata.get("healthUrl");
         String base = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         String path = healthPath.startsWith("/") ? healthPath : "/" + healthPath;
         return base + path;
+    }
+
+    private static void validateHealthUrl(String value)
+    {
+        try
+        {
+            var uri = java.net.URI.create(value);
+            if (("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))
+                    && uri.getHost() != null && uri.getUserInfo() == null
+                    && uri.getQuery() == null && uri.getFragment() == null
+                    && uri.getPort() != 0 && uri.getPort() <= 65535) return;
+        }
+        catch (IllegalArgumentException ignored) { }
+        // Do not include configured addresses or a parsing cause: they may contain secrets.
+        throw new IllegalArgumentException("healthUrl must be an absolute HTTP(S) URL without credentials, query or fragment");
     }
 
     public boolean isHealthy()

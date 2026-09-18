@@ -86,6 +86,10 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
 
             // Build metadata from openApiPath and openApiEnvironments
             Map<String, String> metadata = new java.util.HashMap<>();
+            if (!rs.healthUrl().isEmpty())
+            {
+                metadata.put("healthUrl", ServiceRegistry.resolveEnvPlaceholders(rs.healthUrl()));
+            }
             String openApiPath = rs.openApiPath().isEmpty() ? "" : ServiceRegistry.resolveEnvPlaceholders(rs.openApiPath());
             if (!openApiPath.isEmpty())
             {

@@ -10,6 +10,21 @@
 
 Named service registry with health-aware resolution for GuicedEE. Register services by simple name, auto-construct URLs from cloud DNS suffix, monitor health status, and resolve services via `registry:name` prefix in rest-client `@Endpoint`.
 
+### Private health endpoints
+
+`@RegisteredService(healthUrl = "${CORE_HEALTH_URL}")` can direct polling to a
+separate operational listener without changing the service's application `url`.
+The resolved absolute HTTP(S) URL is stored in `ServiceEntry.metadata().get("healthUrl")`.
+Existing declarations without an override still use `url + healthPath`; existing
+record constructors remain available. Explicit empty, unresolved or malformed
+values fail registration, as do credentials, query strings and fragments.
+
+The polling client verifies TLS certificates and hostnames using the configured
+Java trust material. It neither follows redirects nor treats a 3xx response as
+healthy. Deployments using private CAs must configure trust; certificate bypass is
+no longer supported by the health poller. The override does not configure mTLS
+client keys or authorize access to management endpoints.
+
 Built on [Vert.x 5](https://vertx.io/) · [Google Guice](https://github.com/google/guice) · JPMS module `com.guicedee.service.registry` · Java 25+
 
 ## 📦 Installation

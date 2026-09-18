@@ -30,6 +30,13 @@ public @interface RegisteredService
     String healthPath() default "";
 
     /**
+     * @return Optional absolute HTTP(S) health URL, independent of the application URL.
+     * Supports ${ENV_VAR}. When omitted, url + healthPath is used. Configured values
+     * must resolve to a URL without credentials, query parameters or fragments.
+     */
+    String healthUrl() default "";
+
+    /**
      * @return The HTTP status code that indicates the service is healthy.
      * Default is 200. For services that return 204, 202, etc., set accordingly.
      */
