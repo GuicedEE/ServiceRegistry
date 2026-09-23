@@ -118,11 +118,12 @@ public class ServiceRegistryPostStartup implements IGuicePostStartup<ServiceRegi
 
     private void checkServiceInstance(ServiceEntry service, String key)
     {
-        // Exponential backoff: skip checks for DOWN services based on failure count
+        // Preserve one normal-interval retry after a transient startup failure.
+        // Back off only when the service has failed more than once consecutively.
         int failures = FAILURE_COUNTS.getOrDefault(key, 0);
-        if (failures > 0)
+        if (failures > 1)
         {
-            int backoffMultiplier = Math.min(1 << Math.min(failures, MAX_BACKOFF_EXPONENT), 32);
+            int backoffMultiplier = Math.min(1 << Math.min(failures - 1, MAX_BACKOFF_EXPONENT), 32);
             int skipped = SKIP_COUNTERS.getOrDefault(key, 0);
             if (skipped < backoffMultiplier - 1)
             {
