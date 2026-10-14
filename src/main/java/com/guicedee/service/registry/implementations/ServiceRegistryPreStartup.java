@@ -1,5 +1,7 @@
 package com.guicedee.service.registry.implementations;
 
+import com.guicedee.client.utils.ClassLoading;
+
 import com.guicedee.client.Environment;
 import com.guicedee.client.IGuiceContext;
 import com.guicedee.client.services.lifecycle.IGuicePreStartup;
@@ -268,7 +270,7 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
     {
         for (PackageInfo pi : scanResult.getPackageInfo())
         {
-            if (pi.getAnnotationInfo(ServiceRegistryOptions.class.getName()) != null)
+            if (pi.getDirectAnnotationInfo(ServiceRegistryOptions.class.getName()) != null)
             {
                 try
                 {
@@ -278,7 +280,7 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
             }
         }
         var classes = scanResult.getClassesWithAnnotation(ServiceRegistryOptions.class);
-        return classes.isEmpty() ? null : classes.getFirst().loadClass().getAnnotation(ServiceRegistryOptions.class);
+        return classes.isEmpty() ? null : ClassLoading.loadClass(classes.getFirst()).getAnnotation(ServiceRegistryOptions.class);
     }
 
     private List<RegisteredService> findRegisteredServices(ScanResult scanResult)
@@ -286,8 +288,8 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         List<RegisteredService> results = new ArrayList<>();
         for (PackageInfo pi : scanResult.getPackageInfo())
         {
-            if (pi.getAnnotationInfo(RegisteredService.class.getName()) != null
-                    || pi.getAnnotationInfo(RegisteredServices.class.getName()) != null)
+            if (pi.getDirectAnnotationInfo(RegisteredService.class.getName()) != null
+                    || pi.getDirectAnnotationInfo(RegisteredServices.class.getName()) != null)
             {
                 try
                 {
@@ -300,12 +302,12 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         for (var ci : scanResult.getClassesWithAnnotation(RegisteredService.class))
         {
             if (!ci.getName().endsWith(".package-info"))
-                results.addAll(Arrays.asList(ci.loadClass().getAnnotationsByType(RegisteredService.class)));
+                results.addAll(Arrays.asList(ClassLoading.loadClass(ci).getAnnotationsByType(RegisteredService.class)));
         }
         for (var ci : scanResult.getClassesWithAnnotation(RegisteredServices.class))
         {
             if (!ci.getName().endsWith(".package-info"))
-                results.addAll(Arrays.asList(ci.loadClass().getAnnotationsByType(RegisteredService.class)));
+                results.addAll(Arrays.asList(ClassLoading.loadClass(ci).getAnnotationsByType(RegisteredService.class)));
         }
         return results;
     }
