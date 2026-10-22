@@ -40,7 +40,7 @@ Built on [Vert.x 5](https://vertx.io/) · [Google Guice](https://github.com/goog
 <summary>Gradle (Kotlin DSL)</summary>
 
 ```kotlin
-implementation("com.guicedee:service-registry:2.4.0")
+implementation("com.guicedee:service-registry:2.4.1")
 ```
 </details>
 
