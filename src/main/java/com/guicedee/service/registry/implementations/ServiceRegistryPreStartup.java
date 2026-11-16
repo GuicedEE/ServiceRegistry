@@ -37,7 +37,7 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         if (scanResult == null) return true;
 
         options = findOptions(scanResult);
-        String defaultHealthPath = options != null ? options.healthPath() : "/health/ready";
+        String defaultHealthPath = Environment.getSystemPropertyOrEnvironment("SERVICE_REGISTRY_HEALTH_PATH", options != null ? options.healthPath() : "/health/ready");
         boolean useHttps = options == null || options.useHttps();
         int defaultPort = options != null ? options.defaultPort() : 0;
 
@@ -46,116 +46,7 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
 
         for (RegisteredService rs : registeredServices)
         {
-            String url = rs.url();
-            if (url.isEmpty())
-            {
-                if (dnsSuffix != null && !dnsSuffix.isEmpty())
-                {
-                    String scheme = useHttps ? "https" : "http";
-                    String portPart = defaultPort > 0 ? ":" + defaultPort : "";
-                    url = scheme + "://" + rs.name() + "." + dnsSuffix + portPart;
-                }
-                else
-                {
-                    log.warn("⚠️ Cannot construct URL for service '{}' — no DNS suffix available. " +
-                            "Set url explicitly or add runtime-autoconfigure.", rs.name());
-                    continue;
-                }
-            }
-            else
-            {
-                url = ServiceRegistry.resolveEnvPlaceholders(url);
-            }
-
-            String healthPath = rs.healthPath().isEmpty() ? defaultHealthPath : rs.healthPath();
-
-            // Resolve external URLs
-            List<String> extUrls = new ArrayList<>();
-            if (!rs.externalUrl().isEmpty())
-            {
-                extUrls.add(ServiceRegistry.resolveEnvPlaceholders(rs.externalUrl()));
-            }
-            for (String eu : rs.externalUrls())
-            {
-                if (!eu.isEmpty())
-                {
-                    extUrls.add(ServiceRegistry.resolveEnvPlaceholders(eu));
-                }
-            }
-
-            // Resolve Kubernetes URL
-            String k8sUrl = rs.kubernetesUrl().isEmpty() ? "" : ServiceRegistry.resolveEnvPlaceholders(rs.kubernetesUrl());
-
-            // Build metadata from openApiPath and openApiEnvironments
-            Map<String, String> metadata = new java.util.HashMap<>();
-            if (!rs.healthUrl().isEmpty())
-            {
-                metadata.put("healthUrl", ServiceRegistry.resolveEnvPlaceholders(rs.healthUrl()));
-            }
-            String openApiPath = rs.openApiPath().isEmpty() ? "" : ServiceRegistry.resolveEnvPlaceholders(rs.openApiPath());
-            if (!openApiPath.isEmpty())
-            {
-                metadata.put("openApiPath", openApiPath);
-            }
-            if (rs.openApiEnvironments().length > 0)
-            {
-                metadata.put("openApiEnvironments", String.join(",", rs.openApiEnvironments()));
-            }
-
-            // GraphQL metadata
-            String graphqlPath = rs.graphqlPath().isEmpty() ? "" : ServiceRegistry.resolveEnvPlaceholders(rs.graphqlPath());
-            if (!graphqlPath.isEmpty())
-            {
-                metadata.put("graphqlPath", graphqlPath);
-            }
-            if (rs.graphqlEnvironments().length > 0)
-            {
-                metadata.put("graphqlEnvironments", String.join(",", rs.graphqlEnvironments()));
-            }
-
-            // Health check expectations
-            if (rs.expectedStatusCode() != 200)
-            {
-                metadata.put("expectedStatusCode", String.valueOf(rs.expectedStatusCode()));
-            }
-            if (!"application/json".equals(rs.expectedContentType()))
-            {
-                metadata.put("expectedContentType", rs.expectedContentType());
-            }
-
-            // Revision tracking for blue/green deployments
-            String revision = rs.revision().isEmpty() ? "" : ServiceRegistry.resolveEnvPlaceholders(rs.revision());
-            if (!revision.isEmpty())
-            {
-                metadata.put("revision", revision);
-            }
-
-            // Authentication scheme metadata for OpenAPI merge
-            if (!rs.authScheme().isEmpty())
-            {
-                metadata.put("authScheme", rs.authScheme());
-            }
-            if (!rs.authTokenUrl().isEmpty())
-            {
-                metadata.put("authTokenUrl", ServiceRegistry.resolveEnvPlaceholders(rs.authTokenUrl()));
-            }
-            if (rs.authScopes().length > 0)
-            {
-                metadata.put("authScopes", String.join("|", rs.authScopes()));
-            }
-
-            ServiceRegistry.register(new ServiceEntry(
-                    rs.name(), url, extUrls, k8sUrl, healthPath, ServiceStatus.UNKNOWN, Instant.now(),
-                    metadata.isEmpty() ? Map.of() : Map.copyOf(metadata)));
-
-            // Register aliases
-            for (String alias : rs.aliases())
-            {
-                if (!alias.isEmpty())
-                {
-                    ServiceRegistry.registerAlias(alias, rs.name());
-                }
-            }
+            registerService(rs, defaultHealthPath, useHttps, defaultPort, dnsSuffix);
         }
 
         if (options == null || options.registerSelf())
@@ -185,6 +76,119 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         log.info("📋 Service registry initialized with {} services: {}",
                 ServiceRegistry.all().size(), ServiceRegistry.all().keySet());
         return true;
+    }
+
+    /** Applies declaration text before handing effective metadata to the registry. */
+    static void registerService(RegisteredService rs, String defaultHealthPath, boolean useHttps, int defaultPort, String dnsSuffix)
+    {
+        String serviceName = Environment.resolveAnnotationValue(rs.name());
+        String url = Environment.resolveAnnotationValue(rs.url());
+        if (url.isEmpty())
+        {
+            if (dnsSuffix != null && !dnsSuffix.isEmpty())
+            {
+                String scheme = useHttps ? "https" : "http";
+                String portPart = defaultPort > 0 ? ":" + defaultPort : "";
+                url = scheme + "://" + serviceName + "." + dnsSuffix + portPart;
+            }
+            else
+            {
+                log.warn("⚠️ Cannot construct URL for service '{}' — no DNS suffix available. " +
+                        "Set url explicitly or add runtime-autoconfigure.", serviceName);
+                return;
+            }
+        }
+
+        String healthPath = Environment.resolveAnnotationValue(rs.healthPath());
+        if (healthPath.isEmpty()) healthPath = defaultHealthPath;
+
+        // Resolve external URLs
+        List<String> extUrls = new ArrayList<>();
+        if (!rs.externalUrl().isEmpty())
+        {
+            extUrls.add(Environment.resolveAnnotationValue(rs.externalUrl()));
+        }
+        for (String eu : rs.externalUrls())
+        {
+            if (!eu.isEmpty())
+            {
+                extUrls.add(Environment.resolveAnnotationValue(eu));
+            }
+        }
+
+        // Resolve Kubernetes URL
+        String k8sUrl = rs.kubernetesUrl().isEmpty() ? "" : Environment.resolveAnnotationValue(rs.kubernetesUrl());
+
+        // Build metadata from openApiPath and openApiEnvironments
+        Map<String, String> metadata = new java.util.HashMap<>();
+        if (!rs.healthUrl().isEmpty())
+        {
+            metadata.put("healthUrl", Environment.resolveAnnotationValue(rs.healthUrl()));
+        }
+        String openApiPath = rs.openApiPath().isEmpty() ? "" : Environment.resolveAnnotationValue(rs.openApiPath());
+        if (!openApiPath.isEmpty())
+        {
+            metadata.put("openApiPath", openApiPath);
+        }
+        if (rs.openApiEnvironments().length > 0)
+        {
+            metadata.put("openApiEnvironments", Arrays.stream(rs.openApiEnvironments()).map(Environment::resolveAnnotationValue).collect(java.util.stream.Collectors.joining(",")));
+        }
+
+        // GraphQL metadata
+        String graphqlPath = rs.graphqlPath().isEmpty() ? "" : Environment.resolveAnnotationValue(rs.graphqlPath());
+        if (!graphqlPath.isEmpty())
+        {
+            metadata.put("graphqlPath", graphqlPath);
+        }
+        if (rs.graphqlEnvironments().length > 0)
+        {
+            metadata.put("graphqlEnvironments", Arrays.stream(rs.graphqlEnvironments()).map(Environment::resolveAnnotationValue).collect(java.util.stream.Collectors.joining(",")));
+        }
+
+        // Health check expectations
+        if (rs.expectedStatusCode() != 200)
+        {
+            metadata.put("expectedStatusCode", String.valueOf(rs.expectedStatusCode()));
+        }
+        if (!"application/json".equals(Environment.resolveAnnotationValue(rs.expectedContentType())))
+        {
+            metadata.put("expectedContentType", Environment.resolveAnnotationValue(rs.expectedContentType()));
+        }
+
+        // Revision tracking for blue/green deployments
+        String revision = rs.revision().isEmpty() ? "" : Environment.resolveAnnotationValue(rs.revision());
+        if (!revision.isEmpty())
+        {
+            metadata.put("revision", revision);
+        }
+
+        // Authentication scheme metadata for OpenAPI merge
+        if (!Environment.resolveAnnotationValue(rs.authScheme()).isEmpty())
+        {
+            metadata.put("authScheme", Environment.resolveAnnotationValue(rs.authScheme()));
+        }
+        if (!rs.authTokenUrl().isEmpty())
+        {
+            metadata.put("authTokenUrl", Environment.resolveAnnotationValue(rs.authTokenUrl()));
+        }
+        if (rs.authScopes().length > 0)
+        {
+            metadata.put("authScopes", Arrays.stream(rs.authScopes()).map(Environment::resolveAnnotationValue).collect(java.util.stream.Collectors.joining("|")));
+        }
+
+        ServiceRegistry.register(new ServiceEntry(
+                serviceName, url, extUrls, k8sUrl, healthPath, ServiceStatus.UNKNOWN, Instant.now(),
+                metadata.isEmpty() ? Map.of() : Map.copyOf(metadata)));
+
+        // Register aliases
+        for (String alias : rs.aliases())
+        {
+            if (!alias.isEmpty())
+            {
+                ServiceRegistry.registerAlias(Environment.resolveAnnotationValue(alias), serviceName);
+            }
+        }
     }
 
     private void registerSelf(String defaultHealthPath, boolean useHttps, int defaultPort, String dnsSuffix)
