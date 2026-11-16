@@ -1,6 +1,7 @@
 package com.guicedee.service.registry.implementations;
 
 import com.guicedee.client.utils.ClassLoading;
+import com.guicedee.client.utils.Discovery;
 
 import com.guicedee.client.Environment;
 import com.guicedee.client.IGuiceContext;
@@ -33,15 +34,13 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
 
     private Boolean scan()
     {
-        ScanResult scanResult = IGuiceContext.instance().getScanResult();
-        if (scanResult == null) return true;
-
-        options = findOptions(scanResult);
+        ScanResult scanResult = Discovery.scanResult();
+        options = scanResult == null ? Discovery.firstRegisteredAnnotation(ServiceRegistryOptions.class).orElse(null) : findOptions(scanResult);
         String defaultHealthPath = Environment.getSystemPropertyOrEnvironment("SERVICE_REGISTRY_HEALTH_PATH", options != null ? options.healthPath() : "/health/ready");
         boolean useHttps = options == null || options.useHttps();
         int defaultPort = options != null ? options.defaultPort() : 0;
 
-        List<RegisteredService> registeredServices = findRegisteredServices(scanResult);
+        List<RegisteredService> registeredServices = scanResult == null ? Discovery.registeredAnnotations(RegisteredService.class) : findRegisteredServices(scanResult);
         String dnsSuffix = detectDnsSuffix();
 
         for (RegisteredService rs : registeredServices)
@@ -323,4 +322,3 @@ public class ServiceRegistryPreStartup implements IGuicePreStartup<ServiceRegist
         return Integer.MIN_VALUE + 150;
     }
 }
-
